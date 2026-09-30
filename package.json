@@ -1,0 +1,11 @@
+{
+    "dependencies": {
+        "bcrypt": "^6.0.0",
+        "body-parser": "^2.2.1",
+        "cookie-parser": "^1.4.7",
+        "jsonwebtoken": "^9.0.3",
+        "nodemailer": "^7.0.12",
+        "otp-generator": "4.0.1",
+        "vnpay": "^2.5.0"
+    }
+}
