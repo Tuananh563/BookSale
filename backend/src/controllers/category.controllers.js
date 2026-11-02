@@ -1,8 +1,40 @@
-const cloudinary = require('../config/cloudDinary');
-const categoryModel = require('../models/category.model');
 const fs = require('fs/promises');
+const path = require('path');
+const { cloudinary, isCloudinaryConfigured } = require('../config/cloudDinary');
+const categoryModel = require('../models/category.model');
 const { Created, OK } = require('../core/success.response');
 const { BadRequestError, NotFoundError } = require('../core/error.response');
+
+async function uploadImageAndReturnUrl(image) {
+    const { path: imagePath, filename } = image;
+
+    if (!isCloudinaryConfigured) {
+        return `/uploads/categorys/${filename}`;
+    }
+
+    const { secure_url } = await cloudinary.uploader.upload(imagePath, {
+        folder: 'categorys',
+        resource_type: 'image',
+    });
+
+    await fs.unlink(imagePath).catch(() => {});
+    return secure_url || filename;
+}
+
+async function deleteImageFromStorage(imageUrl) {
+    if (!imageUrl) return;
+
+    if (isCloudinaryConfigured) {
+        await cloudinary.uploader.destroy(getPublicId(imageUrl));
+        return;
+    }
+
+    const fileName = imageUrl.split('/').pop();
+    if (!fileName) return;
+
+    const storagePath = path.join(__dirname, '../uploads/categorys', fileName);
+    await fs.rm(storagePath, { force: true }).catch(() => {});
+}
 
 function getPublicId(url) {
     const parts = url.split('/');
@@ -27,17 +59,12 @@ class categoryController {
             await fs.unlink(path);
             throw new BadRequestError('Thiếu thông tin danh mục');
         }
-        const { url } = await cloudinary.uploader.upload(path, {
-            folder: 'categorys',
-            resource_type: 'image',
-        });
+        const imageUrl = await uploadImageAndReturnUrl({ path, filename });
 
         const newCategory = await categoryModel.create({
             nameCategory,
-            imageCategory: url || filename,
+            imageCategory: imageUrl,
         });
-
-        await fs.unlink(path);
 
         return new Created({
             message: 'Tạo danh mục thành công',
@@ -68,18 +95,12 @@ class categoryController {
         let imageCategory = findCategory.imageCategory;
 
         if (req.file) {
-            const { path, filename } = req.file;
+            const { path: imagePath, filename } = req.file;
+            const newImageUrl = await uploadImageAndReturnUrl({ path: imagePath, filename });
 
-            const { url } = await cloudinary.uploader.upload(path, {
-                folder: 'categorys',
-                resource_type: 'image',
-            });
+            imageCategory = newImageUrl;
 
-            imageCategory = url || filename;
-
-            await cloudinary.uploader.destroy(getPublicId(imageCategory));
-
-            await fs.unlink(path);
+            await deleteImageFromStorage(findCategory.imageCategory);
         }
 
         const updateCategory = await categoryModel.findByIdAndUpdate(
@@ -107,7 +128,7 @@ class categoryController {
             throw new NotFoundError('Danh mục không tồn tại');
         }
 
-        await cloudinary.uploader.destroy(getPublicId(findCategory.imageCategory));
+        await deleteImageFromStorage(findCategory.imageCategory);
 
         await findCategory.deleteOne();
 

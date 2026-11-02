@@ -1,9 +1,42 @@
-const cloudinary = require('../config/cloudDinary');
+const fs = require('fs/promises');
+const path = require('path');
+const { cloudinary, isCloudinaryConfigured } = require('../config/cloudDinary');
 const { Created, OK } = require('../core/success.response');
 const { NotFoundError, BadRequestError } = require('../core/error.response');
 const getPublicId = require('../utils/getPublicId');
 const productModel = require('../models/product.model');
 const feedbackModel = require('../models/feedback.model');
+
+async function uploadImageAndReturnUrl(image) {
+    const { path: imagePath, filename } = image;
+
+    if (!isCloudinaryConfigured) {
+        return `/uploads/products/${filename}`;
+    }
+
+    const { secure_url } = await cloudinary.uploader.upload(imagePath, {
+        folder: 'products',
+        resource_type: 'image',
+    });
+
+    await fs.unlink(imagePath).catch(() => {});
+    return secure_url || filename;
+}
+
+async function deleteImageFromStorage(imageUrl) {
+    if (!imageUrl) return;
+
+    if (isCloudinaryConfigured) {
+        await cloudinary.uploader.destroy(getPublicId(imageUrl));
+        return;
+    }
+
+    const fileName = imageUrl.split('/').pop();
+    if (!fileName) return;
+
+    const storagePath = path.join(__dirname, '../uploads/products', fileName);
+    await fs.rm(storagePath, { force: true }).catch(() => {});
+}
 
 class ProductController {
     async createProduct(req, res) {
@@ -22,7 +55,6 @@ class ProductController {
             !priceProduct ||
             !discountProduct ||
             !stockProduct ||
-            !descriptionProduct ||
             !categoryProduct ||
             !dataImages ||
             !metadata
@@ -33,19 +65,15 @@ class ProductController {
         let imagesProduct = [];
 
         for (const image of dataImages) {
-            const { path, filename } = image;
-            const { url } = await cloudinary.uploader.upload(path, {
-                folder: 'products',
-                resource_type: 'image',
-            });
-            imagesProduct.push(url || filename);
+            const uploadedUrl = await uploadImageAndReturnUrl(image);
+            imagesProduct.push(uploadedUrl);
         }
         const newProduct = await productModel.create({
             nameProduct,
             priceProduct,
             discountProduct,
             stockProduct,
-            descriptionProduct,
+            descriptionProduct: descriptionProduct || '',
             categoryProduct,
             metadata: JSON.parse(metadata),
             imagesProduct,
@@ -58,7 +86,7 @@ class ProductController {
     }
 
     async getAllProduct(req, res) {
-        const products = await productModel.find();
+        const products = await productModel.find().populate('categoryProduct', 'nameCategory');
         return new OK({
             message: 'Lấy danh sách sản phẩm thành công',
             metadata: products,
@@ -86,7 +114,6 @@ class ProductController {
             !priceProduct ||
             !discountProduct ||
             !stockProduct ||
-            !descriptionProduct ||
             !categoryProduct ||
             !metadata ||
             !oldImagesProduct
@@ -103,29 +130,27 @@ class ProductController {
 
         if (dataImages && dataImages.length > 0) {
             for (const image of dataImages) {
-                const { path, filename } = image;
-                const { url } = await cloudinary.uploader.upload(path, {
-                    folder: 'products',
-                    resource_type: 'image',
-                });
-                imagesProduct.push(url || filename);
+                const uploadedUrl = await uploadImageAndReturnUrl(image);
+                imagesProduct.push(uploadedUrl);
             }
         }
         const parserOldImages = oldImagesProduct ? JSON.parse(oldImagesProduct) : [];
         const finalImages = [...parserOldImages, ...imagesProduct];
         const parserMetadata = metadata ? JSON.parse(metadata) : undefined;
+        const updateFields = {
+            nameProduct,
+            priceProduct,
+            discountProduct,
+            stockProduct,
+            categoryProduct,
+            metadata: parserMetadata,
+            imagesProduct: finalImages,
+        };
+        if (descriptionProduct !== undefined) updateFields.descriptionProduct = descriptionProduct;
+
         const updateProduct = await productModel.findByIdAndUpdate(
             id,
-            {
-                nameProduct,
-                priceProduct,
-                discountProduct,
-                stockProduct,
-                descriptionProduct,
-                categoryProduct,
-                metadata: parserMetadata,
-                imagesProduct: finalImages,
-            },
+            updateFields,
             { new: true },
         );
 
@@ -165,7 +190,7 @@ class ProductController {
         }
 
         for (const image of findProduct.imagesProduct) {
-            await cloudinary.uploader.destroy(getPublicId(image));
+            await deleteImageFromStorage(image);
         }
 
         await findProduct.deleteOne();
@@ -179,9 +204,11 @@ class ProductController {
         const { idCategory } = req.params;
         let product = [];
         if (idCategory) {
-            product = await productModel.find({ categoryProduct: idCategory });
+            product = await productModel
+                .find({ categoryProduct: idCategory })
+                .populate('categoryProduct', 'nameCategory');
         } else {
-            product = await productModel.find();
+            product = await productModel.find().populate('categoryProduct', 'nameCategory');
         }
 
         return new OK({

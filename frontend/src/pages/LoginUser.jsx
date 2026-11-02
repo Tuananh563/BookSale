@@ -32,9 +32,10 @@ function LoginUser() {
         try {
             setIsSubmitting(true);
             await requestLogin({ email: form.email.trim(), password: form.password });
-            await refreshAuth();
+            const currentUser = await refreshAuth();
+            const nextRoute = currentUser?.isAdmin ? '/admin' : '/';
             setSuccess('Đăng nhập thành công!');
-            window.setTimeout(() => navigate('/', { replace: true }), 1200);
+            window.setTimeout(() => navigate(nextRoute, { replace: true }), 1200);
         } catch (submitError) {
             setError(
                 submitError.response?.data?.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.',

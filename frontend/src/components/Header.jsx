@@ -1,4 +1,13 @@
-import { ChevronDown, ClipboardList, LogOut, Search, ShoppingBag, User, UserCircle } from 'lucide-react';
+import {
+    ChevronDown,
+    ClipboardList,
+    LayoutDashboard,
+    LogOut,
+    Search,
+    ShoppingBag,
+    User,
+    UserCircle,
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useStore } from '../hooks/useStore';
@@ -74,7 +83,7 @@ function Header() {
                             AT
                         </div>
 
-                        <span className="text-2xl font-bold text-blue-600">Sales Shop</span>
+                        <span className="text-2xl font-bold #44c591">Sales Shop</span>
                     </div>
                 </Link>
 
@@ -187,6 +196,15 @@ function Header() {
                                     >
                                         <User size={17} /> Hồ sơ cá nhân
                                     </Link>
+                                    {dataUser?.isAdmin && (
+                                        <Link
+                                            to="/admin"
+                                            className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+                                            onClick={() => setIsMenuOpen(false)}
+                                        >
+                                            <LayoutDashboard size={17} /> Trang quản trị
+                                        </Link>
+                                    )}
                                     <Link
                                         to="/cart"
                                         className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"

@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 const port = 3000;
 
@@ -12,7 +13,9 @@ const router = require('./router/index.router');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(cors({ origin: 'https://book-sale-tau.vercel.app', credentials: true }));
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(cookieParser());
 

@@ -7,6 +7,7 @@ import ForgotPassword from '../pages/ForgotPassword';
 import RegisterUser from '../pages/RegisterUser';
 import PaymentSuccessOrder from '../pages/PaymentSuccessOrder';
 import MyOrders from '../pages/MyOrders';
+import Admin from '../pages/Admin';
 
 const routes = [
     {
@@ -44,6 +45,10 @@ const routes = [
     {
         path: '/my-orders',
         component: <MyOrders />,
+    },
+    {
+        path: '/admin',
+        component: <Admin />,
     },
 ];
 

@@ -9,7 +9,7 @@ const productModel = new Schema(
         priceProduct: { type: Number, require: true },
         discountProduct: { type: Number, default: 0 },
         stockProduct: { type: Number, default: 0 },
-        descriptionProduct: { type: String, require: true },
+        descriptionProduct: { type: String, default: '' },
         categoryProduct: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
         metadata: { type: mongoose.Schema.Types.Mixed },
     },

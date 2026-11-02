@@ -22,7 +22,7 @@ function CardBody({ dataItem }) {
         imagesProduct = [],
         priceProduct = 0,
         discountProduct = 0,
-        descriptionProduct = '',
+        categoryProduct,
         metadata = {},
     } = dataItem;
     const discount = Number(discountProduct) || 0;
@@ -31,6 +31,8 @@ function CardBody({ dataItem }) {
     const image = imagesProduct[0];
     const isOutOfStock = availableStock <= 0;
     const metadataValues = Object.entries(metadata || {}).slice(0, 3);
+    const categoryName =
+        typeof categoryProduct === 'object' && categoryProduct !== null ? categoryProduct.nameCategory : '';
 
     const handleAddToCart = async () => {
         if (!dataUser?._id) {
@@ -77,9 +79,7 @@ function CardBody({ dataItem }) {
                 <Link to={`/product/${dataItem._id}`}>
                     <h3 className="product-card__name">{nameProduct || 'Sản phẩm chưa đặt tên'}</h3>
                 </Link>
-                <p className="product-card__description">
-                    {descriptionProduct || 'Sản phẩm chất lượng cao, phù hợp cho nhu cầu hằng ngày.'}
-                </p>
+                {categoryName && <span className="product-card__category">{categoryName}</span>}
 
                 {metadataValues.length > 0 && (
                     <div className="product-card__details">
